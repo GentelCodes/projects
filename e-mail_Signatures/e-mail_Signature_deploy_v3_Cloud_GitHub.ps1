@@ -1,53 +1,61 @@
-﻿param(
-    [string]$DisplayName,
-    [string]$Title,
-    [string]$MobilePhone,
-    [string]$Email
+#requires -version 3.0
+param(
+    [Parameter(Mandatory=$true)][string]$DisplayName,
+    [Parameter(Mandatory=$true)][string]$Title,
+    [Parameter(Mandatory=$true)][string]$MobilePhone,
+    [Parameter(Mandatory=$true)][string]$Email
 )
 
-# TEMP klasöründeki HTML şablon dosya yolu
-$templatePath = "$env:TEMP\e-mail_Signature_Template.html"
+# Yürütmeyi profilden etkilenmesin diye öneri: powershell -NoProfile ile çağır
+# Şablon dosyası TEMP'e kopyalanacak (BAT tarafında)
+$templatePath = Join-Path $env:TEMP "e-mail_Signature_Template.html"
 
-# Hedef Outlook imza klasörü
-$signatureName = "firma-imza"
-$signatureFolder = Join-Path $env:APPDATA "Microsoft\Signatures"
-$htmlSignaturePath = Join-Path $signatureFolder "$signatureName.htm"
+# Outlook imza klasörü/isimleri
+$signatureName    = "firma-imza"
+$signatureFolder  = Join-Path $env:APPDATA "Microsoft\Signatures"
+$htmlSignature    = Join-Path $signatureFolder "$signatureName.htm"
+$rtfSignature     = Join-Path $signatureFolder "$signatureName.rtf"
+$txtSignature     = Join-Path $signatureFolder "$signatureName.txt"
+
+# PS1 içine yanlışlıkla HTML sızmış mı? (koruyucu kontrol)
+$psSelfContent = Get-Content -Raw -LiteralPath $PSCommandPath
+if ($psSelfContent -match '<html|<style|--tab-size-preference|</body>|</html>') {
+    Write-Error "HTML içerik PS1 dosyasına karışmış görünüyor. BAT akışını kontrol et (PS1'e ECHO/APPEND yapılmamalı)."
+    exit 2
+}
 
 # Şablonu oku
-try {
-    $templateContent = Get-Content -Path $templatePath -Raw
-} catch {
+if (!(Test-Path -LiteralPath $templatePath)) {
     Write-Error "HTML imza şablonu bulunamadı: $templatePath"
     exit 1
 }
+$templateContent = Get-Content -Raw -LiteralPath $templatePath
 
-# Yer tutucuları değiştir
-$templateContent = $templateContent -replace '%%DisplayName%%', [regex]::Escape($DisplayName)
-$templateContent = $templateContent -replace '%%Title%%', [regex]::Escape($Title)
-$templateContent = $templateContent -replace '%%MobilePhone%%', [regex]::Escape($MobilePhone)
-$templateContent = $templateContent -replace '%%Email%%', [regex]::Escape($Email)
+# Yer tutucuları değiştir (regex değil, düz Replace)
+$templateContent = $templateContent.Replace('%%DisplayName%%', $DisplayName)
+$templateContent = $templateContent.Replace('%%Title%%',       $Title)
+$templateContent = $templateContent.Replace('%%MobilePhone%%', $MobilePhone)
+$templateContent = $templateContent.Replace('%%Email%%',       $Email)
 
 # İmza klasörü yoksa oluştur
-if (!(Test-Path $signatureFolder)) {
-    New-Item -Path $signatureFolder -ItemType Directory | Out-Null
+if (!(Test-Path -LiteralPath $signatureFolder)) {
+    New-Item -ItemType Directory -Path $signatureFolder | Out-Null
 }
 
-# HTML imzayı oluştur
-$templateContent | Set-Content -Path $htmlSignaturePath -Encoding UTF8
+# HTML imzayı yaz (Outlook .htm kullanır)
+Set-Content -LiteralPath $htmlSignature -Value $templateContent -Encoding UTF8
 
-# Boş RTF ve TXT dosyaları oluştur (Outlook için gerekli)
-"" | Set-Content -Path (Join-Path $signatureFolder "$signatureName.rtf")
-"" | Set-Content -Path (Join-Path $signatureFolder "$signatureName.txt")
+# Boş RTF/TXT (bazı Outlook sürümleri bunları listeler)
+Set-Content -LiteralPath $rtfSignature -Value '' -Encoding Unicode
+Set-Content -LiteralPath $txtSignature -Value '' -Encoding UTF8
 
-# Outlook registry ayarları
-$officeVersions = @("16.0", "15.0", "14.0")  # 16=2016/2019/365, 15=2013, 14=2010
-foreach ($version in $officeVersions) {
-    $regPath = "HKCU:\Software\Microsoft\Office\$version\Common\MailSettings"
-    
-    if (!(Test-Path $regPath)) {
-        New-Item -Path $regPath -Force | Out-Null
-    }
-
-    Set-ItemProperty -Path $regPath -Name "NewSignature" -Value $signatureName -Force
-    Set-ItemProperty -Path $regPath -Name "ReplySignature" -Value $signatureName -Force
+# Outlook registry ayarları (New/Reply imzaları ata)
+$officeVersions = @('16.0','15.0','14.0')  # 16=2016/2019/365, 15=2013, 14=2010
+foreach ($v in $officeVersions) {
+    $reg = "HKCU:\Software\Microsoft\Office\$v\Common\MailSettings"
+    if (!(Test-Path $reg)) { New-Item -Path $reg -Force | Out-Null }
+    Set-ItemProperty -Path $reg -Name NewSignature   -Value $signatureName -Force
+    Set-ItemProperty -Path $reg -Name ReplySignature -Value $signatureName -Force
 }
+
+Write-Host "İmza oluşturuldu: $htmlSignature"
