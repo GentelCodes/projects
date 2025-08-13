@@ -6,8 +6,8 @@ set "TMP_PS1=%TEMP%\e-mail_Signature_deploy_v2_Cloud_GitHub_GENTEL.ps1"
 set "TMP_HTML=%TEMP%\e-mail_Signature_Template.html"
 
 :: Cloud üzerindeki dosyalar TEMP dizinine indirilir (GitHub RAW Link)
-powershell -Command "Invoke-WebRequest -Uri 'https://github.com/GentelCodes/projects/blob/main/e-mail_Signatures/e-mail_Signature_deploy_v2_Cloud_GitHub_GENTEL.ps1' -OutFile '%TMP_PS1%'"
-powershell -Command "Invoke-WebRequest -Uri 'https://github.com/GentelCodes/projects/blob/main/e-mail_Signatures/e-mail_Signature_Template.html' -OutFile '%TMP_HTML%'"
+powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/GentelCodes/projects/refs/heads/main/e-mail_Signatures/e-mail_Signature_deploy_v2_Cloud_GitHub_GENTEL.ps1' -OutFile '%TMP_PS1%'"
+powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/GentelCodes/projects/refs/heads/main/e-mail_Signatures/e-mail_Signature_Template.html' -OutFile '%TMP_HTML%'"
 
 :: Kullanıcıdan bilgiler alınır
 set /p fullName=Ad SOYAD: 
