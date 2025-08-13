@@ -11,7 +11,7 @@ param(
 $templatePath = Join-Path $env:TEMP "e-mail_Signature_Template.html"
 
 # Outlook imza klasörü/isimleri
-$signatureName    = "firma-imza"
+$signatureName    = "GENTEL-Imza"
 $signatureFolder  = Join-Path $env:APPDATA "Microsoft\Signatures"
 $htmlSignature    = Join-Path $signatureFolder "$signatureName.htm"
 $rtfSignature     = Join-Path $signatureFolder "$signatureName.rtf"
@@ -58,4 +58,4 @@ foreach ($v in $officeVersions) {
     Set-ItemProperty -Path $reg -Name ReplySignature -Value $signatureName -Force
 }
 
-Write-Host "İmza oluşturuldu: $htmlSignature"
+Write-Host "Outlook e-Posta imzanız başarılı bir şekilde oluşturuldu: $htmlSignature"
